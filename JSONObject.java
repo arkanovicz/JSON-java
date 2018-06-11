@@ -27,6 +27,7 @@ import java.io.Closeable;
  */
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
@@ -99,13 +100,13 @@ import java.util.Set;
  * @author JSON.org
  * @version 2016-08-15
  */
-public class JSONObject {
+public class JSONObject implements Serializable {
     /**
      * JSONObject.NULL is equivalent to the value that JavaScript calls null,
      * whilst Java's null is equivalent to the value that JavaScript calls
      * undefined.
      */
-    private static final class Null {
+    private static final class Null implements Serializable {
 
         /**
          * There is only intended to be a single instance of the NULL object,
@@ -154,7 +155,7 @@ public class JSONObject {
     /**
      * The map where the JSONObject's properties are kept.
      */
-    private final Map<String, Object> map;
+    private final Map<String, Serializable> map;
 
     /**
      * It is sometimes more convenient and less ambiguous to have a
@@ -162,7 +163,7 @@ public class JSONObject {
      * <code>JSONObject.NULL.equals(null)</code> returns <code>true</code>.
      * <code>JSONObject.NULL.toString()</code> returns <code>"null"</code>.
      */
-    public static final Object NULL = new Null();
+    public static final Serializable NULL = new Null();
 
     /**
      * Construct an empty JSONObject.
@@ -174,7 +175,7 @@ public class JSONObject {
         // implementations to rearrange their items for a faster element 
         // retrieval based on associative access.
         // Therefore, an implementation mustn't rely on the order of the item.
-        this.map = new HashMap<String, Object>();
+        this.map = new HashMap<String, Serializable>();
     }
 
     /**
@@ -242,7 +243,7 @@ public class JSONObject {
                     throw x.syntaxError("Duplicate key \"" + key + "\"");
                 }
                 // Only add value if non-null
-                Object value = x.nextValue();
+                Serializable value = x.nextValue();
                 if (value!=null) {
                     this.put(key, value);
                 }
@@ -277,16 +278,16 @@ public class JSONObject {
      * @throws NullPointerException
      *            If a key in the map is <code>null</code>
      */
-    public JSONObject(Map<?, ?> m) {
+    public JSONObject(Map<?, ? extends Serializable> m) {
         if (m == null) {
-            this.map = new HashMap<String, Object>();
+            this.map = new HashMap<String, Serializable>();
         } else {
-            this.map = new HashMap<String, Object>(m.size());
-        	for (final Entry<?, ?> e : m.entrySet()) {
+            this.map = new HashMap<String, Serializable>(m.size());
+        	for (final Entry<?, ? extends Serializable> e : m.entrySet()) {
         	    if(e.getKey() == null) {
         	        throw new NullPointerException("Null key.");
         	    }
-                final Object value = e.getValue();
+                final Serializable value = e.getValue();
                 if (value != null) {
                     this.map.put(String.valueOf(e.getKey()), wrap(value));
                 }
@@ -377,7 +378,10 @@ public class JSONObject {
         for (int i = 0; i < names.length; i += 1) {
             String name = names[i];
             try {
-                this.putOpt(name, c.getField(name).get(object));
+                Object value = c.getField(name).get(object);
+                if (value instanceof Serializable) {
+                    this.putOpt(name, (Serializable)object);
+                }
             } catch (Exception ignore) {
             }
         }
@@ -450,7 +454,7 @@ public class JSONObject {
      * @param initialCapacity initial capacity of the internal map.
      */
     protected JSONObject(int initialCapacity){
-        this.map = new HashMap<String, Object>(initialCapacity);
+        this.map = new HashMap<String, Serializable>(initialCapacity);
     }
 
     /**
@@ -474,9 +478,9 @@ public class JSONObject {
      * @throws NullPointerException
      *            If the key is <code>null</code>.
      */
-    public JSONObject accumulate(String key, Object value) throws JSONException {
+    public JSONObject accumulate(String key, Serializable value) throws JSONException {
         testValidity(value);
-        Object object = this.opt(key);
+        Serializable object = this.opt(key);
         if (object == null) {
             this.put(key,
                     value instanceof JSONArray ? new JSONArray().put(value)
@@ -506,9 +510,9 @@ public class JSONObject {
      * @throws NullPointerException
      *            If the key is <code>null</code>.
      */
-    public JSONObject append(String key, Object value) throws JSONException {
+    public JSONObject append(String key, Serializable value) throws JSONException {
         testValidity(value);
-        Object object = this.opt(key);
+        Serializable object = this.opt(key);
         if (object == null) {
             this.put(key, new JSONArray().put(value));
         } else if (object instanceof JSONArray) {
@@ -949,7 +953,7 @@ public class JSONObject {
      *
      * @return An Entry Set
      */
-    protected Set<Entry<String, Object>> entrySet() {
+    protected Set<Entry<String, Serializable>> entrySet() {
         return this.map.entrySet();
     }
 
@@ -1022,7 +1026,7 @@ public class JSONObject {
      *            A key string.
      * @return An object which is the value, or null if there is no value.
      */
-    public Object opt(String key) {
+    public Serializable opt(String key) {
         return key == null ? null : this.map.get(key);
     }
 
@@ -1491,8 +1495,8 @@ public class JSONObject {
                 if (key != null && !key.isEmpty()) {
                     try {
                         final Object result = method.invoke(bean);
-                        if (result != null) {
-                            this.map.put(key, wrap(result));
+                        if (result != null && result instanceof Serializable) {
+                            this.map.put(key, wrap((Serializable)result));
                             // we don't use the result anywhere outside of wrap
                             // if it's a resource we should be sure to close it
                             // after calling toString
@@ -1805,7 +1809,7 @@ public class JSONObject {
      * @throws NullPointerException
      *            If the key is <code>null</code>.
      */
-    public JSONObject put(String key, Object value) throws JSONException {
+    public JSONObject put(String key, Serializable value) throws JSONException {
         if (key == null) {
             throw new NullPointerException("Null key.");
         }
@@ -1829,7 +1833,7 @@ public class JSONObject {
      * @throws JSONException
      *             if the key is a duplicate
      */
-    public JSONObject putOnce(String key, Object value) throws JSONException {
+    public JSONObject putOnce(String key, Serializable value) throws JSONException {
         if (key != null && value != null) {
             if (this.opt(key) != null) {
                 throw new JSONException("Duplicate key \"" + key + "\"");
@@ -1853,7 +1857,7 @@ public class JSONObject {
      * @throws JSONException
      *             If the value is a non-finite number.
      */
-    public JSONObject putOpt(String key, Object value) throws JSONException {
+    public JSONObject putOpt(String key, Serializable value) throws JSONException {
         if (key != null && value != null) {
             return this.put(key, value);
         }
@@ -2155,7 +2159,7 @@ public class JSONObject {
      */
     // Changes to this method must be copied to the corresponding method in
     // the XML class to keep full support for Android
-    public static Object stringToValue(String string) {
+    public static Serializable stringToValue(String string) {
         if (string.equals("")) {
             return string;
         }
@@ -2344,7 +2348,7 @@ public class JSONObject {
      *            The object to wrap
      * @return The wrapped value
      */
-    public static Object wrap(Object object) {
+    public static Serializable wrap(Serializable object) {
         try {
             if (object == null) {
                 return NULL;
@@ -2361,14 +2365,14 @@ public class JSONObject {
             }
 
             if (object instanceof Collection) {
-                Collection<?> coll = (Collection<?>) object;
+                Collection<? extends Serializable> coll = (Collection<? extends Serializable>) object;
                 return new JSONArray(coll);
             }
             if (object.getClass().isArray()) {
                 return new JSONArray(object);
             }
             if (object instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) object;
+                Map<?, ? extends Serializable> map = (Map<?, ? extends Serializable>) object;
                 return new JSONObject(map);
             }
             Package objectPackage = object.getClass().getPackage();
@@ -2543,16 +2547,16 @@ public class JSONObject {
      *
      * @return a java.util.Map containing the entries of this object
      */
-    public Map<String, Object> toMap() {
-        Map<String, Object> results = new HashMap<String, Object>();
-        for (Entry<String, Object> entry : this.entrySet()) {
-            Object value;
+    public Map<String, Serializable> toMap() {
+        Map<String, Serializable> results = new HashMap<String, Serializable>();
+        for (Entry<String, Serializable> entry : this.entrySet()) {
+            Serializable value;
             if (entry.getValue() == null || NULL.equals(entry.getValue())) {
                 value = null;
             } else if (entry.getValue() instanceof JSONObject) {
-                value = ((JSONObject) entry.getValue()).toMap();
+                value = (Serializable)((JSONObject) entry.getValue()).toMap();
             } else if (entry.getValue() instanceof JSONArray) {
-                value = ((JSONArray) entry.getValue()).toList();
+                value = (Serializable)((JSONArray) entry.getValue()).toList();
             } else {
                 value = entry.getValue();
             }

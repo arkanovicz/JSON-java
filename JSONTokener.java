@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.StringReader;
 
 /*
@@ -418,7 +419,7 @@ public class JSONTokener {
      *
      * @return An object.
      */
-    public Object nextValue() throws JSONException {
+    public Serializable nextValue() throws JSONException {
         char c = this.nextClean();
         String string;
 

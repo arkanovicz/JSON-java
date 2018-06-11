@@ -24,6 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import java.io.Serializable;
+
 /**
  * Convert a web browser cookie specification to a JSONObject and back.
  * JSON and Cookies are both notations for name/value pairs.
@@ -81,7 +83,7 @@ public class Cookie {
     public static JSONObject toJSONObject(String string) throws JSONException {
         String         name;
         JSONObject     jo = new JSONObject();
-        Object         value;
+        Serializable   value;
         JSONTokener x = new JSONTokener(string);
         jo.put("name", x.nextTo('='));
         x.next('=');

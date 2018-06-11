@@ -24,6 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import java.io.Serializable;
+
 /**
  * This provides static methods to convert an XML text into a JSONArray or
  * JSONObject, and to covert a JSONArray or JSONObject into an XML text using
@@ -222,9 +224,13 @@ public class JSONML {
                 }
             } else {
                 if (ja != null) {
-                    ja.put(token instanceof String
-                        ? keepStrings ? XML.unescape((String)token) :XML.stringToValue((String)token)
-                        : token);
+                    if (token instanceof Serializable) {
+                        ja.put(token instanceof String
+                               ? keepStrings ? XML.unescape((String)token) :XML.stringToValue((String)token)
+                               : (Serializable)token);
+                    } else {
+                        throw x.syntaxError("Unserializable object");
+                    }
                 }
             }
         }

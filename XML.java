@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.util.Iterator;
 
@@ -407,7 +408,7 @@ public class XML {
      */
     // To maintain compatibility with the Android API, this method is a direct copy of
     // the one in JSONObject. Changes made here should be reflected there.
-    public static Object stringToValue(String string) {
+    public static Serializable stringToValue(String string) {
         if (string.equals("")) {
             return string;
         }

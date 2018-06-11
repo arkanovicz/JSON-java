@@ -25,6 +25,7 @@ package org.json;
  */
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Array;
@@ -81,18 +82,18 @@ import java.util.Map;
  * @author JSON.org
  * @version 2016-08/15
  */
-public class JSONArray implements Iterable<Object> {
+public class JSONArray implements Iterable<Serializable>, Serializable {
 
     /**
      * The arrayList where the JSONArray's properties are kept.
      */
-    private final ArrayList<Object> myArrayList;
+    private final ArrayList<Serializable> myArrayList;
 
     /**
      * Construct an empty JSONArray.
      */
     public JSONArray() {
-        this.myArrayList = new ArrayList<Object>();
+        this.myArrayList = new ArrayList<Serializable>();
     }
 
     /**
@@ -168,12 +169,12 @@ public class JSONArray implements Iterable<Object> {
      * @param collection
      *            A Collection.
      */
-    public JSONArray(Collection<?> collection) {
+    public JSONArray(Collection<? extends Serializable> collection) {
         if (collection == null) {
-            this.myArrayList = new ArrayList<Object>();
+            this.myArrayList = new ArrayList<Serializable>();
         } else {
-            this.myArrayList = new ArrayList<Object>(collection.size());
-        	for (Object o: collection){
+            this.myArrayList = new ArrayList<Serializable>(collection.size());
+        	for (Serializable o: collection){
         		this.myArrayList.add(JSONObject.wrap(o));
         	}
         }
@@ -188,10 +189,16 @@ public class JSONArray implements Iterable<Object> {
     public JSONArray(Object array) throws JSONException {
         this();
         if (array.getClass().isArray()) {
-            int length = Array.getLength(array);
-            this.myArrayList.ensureCapacity(length);
-            for (int i = 0; i < length; i += 1) {
-                this.put(JSONObject.wrap(Array.get(array, i)));
+            Class<?> componentType = array.getClass().getComponentType();
+            if (Serializable.class.isAssignableFrom(componentType)) {
+                int length = Array.getLength(array);
+                this.myArrayList.ensureCapacity(length);
+                for (int i = 0; i < length; i += 1) {
+                    this.put(JSONObject.wrap((Serializable)Array.get(array, i)));
+                }
+            } else {
+                throw new JSONException(
+                    "JSONArray initial value should be serializable.");                
             }
         } else {
             throw new JSONException(
@@ -200,7 +207,7 @@ public class JSONArray implements Iterable<Object> {
     }
 
     @Override
-    public Iterator<Object> iterator() {
+    public Iterator<Serializable> iterator() {
         return this.myArrayList.iterator();
     }
 
@@ -213,8 +220,8 @@ public class JSONArray implements Iterable<Object> {
      * @throws JSONException
      *             If there is no value for the index.
      */
-    public Object get(int index) throws JSONException {
-        Object object = this.opt(index);
+    public Serializable get(int index) throws JSONException {
+        Serializable object = this.opt(index);
         if (object == null) {
             throw new JSONException("JSONArray[" + index + "] not found.");
         }
@@ -516,7 +523,7 @@ public class JSONArray implements Iterable<Object> {
      *            The index must be between 0 and length() - 1. If not, null is returned.
      * @return An object value, or null if there is no object at that index.
      */
-    public Object opt(int index) {
+    public Serializable opt(int index) {
         return (index < 0 || index >= this.length()) ? null : this.myArrayList
                 .get(index);
     }
@@ -1031,7 +1038,7 @@ public class JSONArray implements Iterable<Object> {
      * @throws NullPointerException
      *            If a key in the map is <code>null</code>
      */
-    public JSONArray put(Map<?, ?> value) {
+    public JSONArray put(Map<?, ? extends Serializable> value) {
         return this.put(new JSONObject(value));
     }
 
@@ -1046,7 +1053,7 @@ public class JSONArray implements Iterable<Object> {
      * @throws JSONException
      *            If the value is non-finite number.
      */
-    public JSONArray put(Object value) {
+    public JSONArray put(Serializable value) {
         JSONObject.testValidity(value);
         this.myArrayList.add(value);
         return this;
@@ -1189,7 +1196,7 @@ public class JSONArray implements Iterable<Object> {
      *             If the index is negative or if the the value is an invalid
      *             number.
      */
-    public JSONArray put(int index, Object value) throws JSONException {
+    public JSONArray put(int index, Serializable value) throws JSONException {
         if (index < 0) {
             throw new JSONException("JSONArray[" + index + "] not found.");
         }
@@ -1513,15 +1520,15 @@ public class JSONArray implements Iterable<Object> {
      *
      * @return a java.util.List containing the elements of this array
      */
-    public List<Object> toList() {
-        List<Object> results = new ArrayList<Object>(this.myArrayList.size());
-        for (Object element : this.myArrayList) {
+    public List<Serializable> toList() {
+        List<Serializable> results = new ArrayList<Serializable>(this.myArrayList.size());
+        for (Serializable element : this.myArrayList) {
             if (element == null || JSONObject.NULL.equals(element)) {
                 results.add(null);
             } else if (element instanceof JSONArray) {
-                results.add(((JSONArray) element).toList());
+                results.add((Serializable)((JSONArray) element).toList());
             } else if (element instanceof JSONObject) {
-                results.add(((JSONObject) element).toMap());
+                results.add((Serializable)((JSONObject) element).toMap());
             } else {
                 results.add(element);
             }
